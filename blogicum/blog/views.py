@@ -33,9 +33,12 @@ class ProfileDetailView(DetailView):
         context['profile'] = get_object_or_404(
             User, username=self.kwargs['username'])
 
-        if (self.request.user.username 
-            == self.kwargs['username']):
-            posts = Post.with_comment_count_author().filter(author=self.request.user)
+        if (self.request.user.username
+                == self.kwargs['username']):
+            posts = (
+                Post.with_comment_count_author().
+                filter(author=self.request.user)
+                    )
         else:
             posts = Post.with_comment_count_all().filter(
                 author=context['profile'])
