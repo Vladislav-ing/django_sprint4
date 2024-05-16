@@ -38,7 +38,7 @@ class ProfileDetailView(DetailView):
             posts = (
                 Post.with_comment_count_author().
                 filter(author=self.request.user)
-                    )
+            )
         else:
             posts = Post.with_comment_count_all().filter(
                 author=context['profile'])
