@@ -114,8 +114,8 @@ class Post(TotalPublishCreate):
 
 
 class Comment(TotalPublishCreate):
-    """Модель комментария. Создание, редактирование, удаление. """
-    
+    """Модель комментария. Создание, редактирование, удаление."""
+   
     author = models.ForeignKey(
         UserModel, verbose_name='Автор комментария',
         related_name='comments', on_delete=models.CASCADE,

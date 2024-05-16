@@ -3,7 +3,8 @@ from django.core.paginator import Paginator
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 
-from django.views.generic import CreateView, DetailView, ListView, UpdateView, DeleteView
+from django.views.generic import (
+    CreateView, DetailView, ListView, UpdateView, DeleteView)
 
 from django.shortcuts import get_object_or_404, render
 
@@ -32,7 +33,8 @@ class ProfileDetailView(DetailView):
         context['profile'] = get_object_or_404(
             User, username=self.kwargs['username'])
 
-        if self.request.user.username == self.kwargs['username']:
+        if (self.request.user.username 
+            == self.kwargs['username']):
             posts = Post.with_comment_count_author().filter(author=self.request.user)
         else:
             posts = Post.with_comment_count_all().filter(
