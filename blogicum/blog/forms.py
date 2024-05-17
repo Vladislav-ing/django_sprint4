@@ -1,10 +1,9 @@
 from django import forms
-
-from django.contrib.auth.forms import UserChangeForm
 from django.contrib.auth import get_user_model
-
-from .models import Post, Comment
+from django.contrib.auth.forms import UserChangeForm
 from django.utils import timezone
+
+from .models import Comment, Post
 
 User = get_user_model()
 
@@ -19,7 +18,7 @@ class PostForm(forms.ModelForm):
 
     class Meta:
         model = Post
-        exclude = ('author', 'is_published')
+        exclude = ('author', )
         widgets = {'pub_date': forms.DateTimeInput(
             format='%Y-%m-%dT%H:%M', attrs={'type': 'datetime-local'})
         }

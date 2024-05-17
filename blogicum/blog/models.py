@@ -1,10 +1,10 @@
-from django.db import models
-
 from django.contrib.auth import get_user_model
+from django.db import models
 from django.urls import reverse
 
 from core.models import TotalPublishCreate
-from core.utils import PostsActiveManager, PostTotalManager
+from core.utils import PostsQuerySet
+
 from . import constants
 
 UserModel = get_user_model()
@@ -14,7 +14,7 @@ class Location(TotalPublishCreate):
     """Модель для локационных меток."""
 
     name = models.CharField(
-        max_length=constants.TITLE_FIELD_LENGTH, blank=True,
+        max_length=constants.TITLE_FIELD_LENGTH,
         verbose_name='Название места'
     )
 
@@ -88,9 +88,7 @@ class Post(TotalPublishCreate):
 
     objects = models.Manager()
 
-    display_object = PostsActiveManager()
-
-    all_obj = PostTotalManager()
+    custom_manager = PostsQuerySet.as_manager()
 
     class Meta:
         verbose_name = 'публикация'
@@ -103,35 +101,27 @@ class Post(TotalPublishCreate):
     def get_absolute_url(self):
         return reverse("blog:post_detail", kwargs={"post_id": self.pk})
 
-    @staticmethod
-    def with_comment_count_all():
-        return Post.display_object.annotate(
-            comment_count=models.Count('comments'))
-
-    @staticmethod
-    def with_comment_count_author():
-        return Post.all_obj.annotate(comment_count=models.Count('comments'))
-
 
 class Comment(TotalPublishCreate):
     """Модель комментария. Создание, редактирование, удаление."""
 
     author = models.ForeignKey(
         UserModel, verbose_name='Автор комментария',
-        related_name='comments', on_delete=models.CASCADE,
+        on_delete=models.CASCADE,
     )
     post = models.ForeignKey(
         Post, verbose_name='Комментируемый пост',
-        related_name='comments', on_delete=models.CASCADE,
+        on_delete=models.CASCADE,
     )
     text = models.TextField(
-        max_length=1020, verbose_name='Текст комментария',
+        verbose_name='Текст комментария',
     )
 
     class Meta:
         verbose_name = 'комментарий'
         verbose_name_plural = 'Комментарии'
         ordering = ('created_at', )
+        default_related_name = 'comments'
 
     def __str__(self):
         return self.text[:constants.DISPLAY_LENGTH]

@@ -1,51 +1,43 @@
-from django.core.paginator import Paginator
-
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
-
-from django.views.generic import (
-    CreateView, DetailView, ListView, UpdateView, DeleteView)
-
-from django.shortcuts import get_object_or_404, render
-
+from django.core.paginator import Paginator
 from django.http import Http404
-
-from django.utils import timezone
-
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
+from django.views.generic import (CreateView, DeleteView, ListView,
+                                  UpdateView)
 
 from .constants import AMOUNT_POSTS
-from .forms import PostForm, UserEditForm, CommentForm
-from .models import Category, Post, Comment
-from .mixins import AuthorMixin, PostMixin, CommentMixin
+from .forms import CommentForm, PostForm, UserEditForm
+from .mixins import AuthorMixin, CommentMixin, PostMixin
+from .models import Category, Comment, Post
 
 User = get_user_model()
 
 
-class ProfileDetailView(DetailView):
-    model = User
+class ProfileDetailView(ListView):
+    model = Post
     template_name = 'blog/profile.html'
+    paginate_by = AMOUNT_POSTS
     slug_field = 'username'
     slug_url_kwarg = 'username'
 
+    def get_queryset(self):
+        self.profile = get_object_or_404(
+            User, username=self.kwargs['username'])
+        if self.request.user == self.profile:
+            return (Post.custom_manager.posts_annotate()
+                    .filter(author=self.profile))
+        else:
+            return (Post.custom_manager
+                    .posts_published()
+                    .posts_annotate()
+                    .filter(author=self.profile))
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['profile'] = get_object_or_404(
-            User, username=self.kwargs['username'])
-
-        if (self.request.user.username
-                == self.kwargs['username']):
-            posts = (
-                Post.with_comment_count_author().
-                filter(author=self.request.user)
-            )
-        else:
-            posts = Post.with_comment_count_all().filter(
-                author=context['profile'])
-
-        paginator = Paginator(posts, AMOUNT_POSTS)
-        page_number = self.request.GET.get('page')
-        context['page_obj'] = paginator.get_page(page_number)
+        context['profile'] = self.profile
         context['user'] = self.request.user
         return context
 
@@ -69,7 +61,6 @@ class PostCreateView(LoginRequiredMixin, PostMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.author = self.request.user
-        form.instance.is_published = True
         return super().form_valid(form)
 
     def get_success_url(self):
@@ -88,7 +79,9 @@ class IndexPostListView(ListView):
     paginate_by = AMOUNT_POSTS
 
     def get_queryset(self):
-        return Post.with_comment_count_all()
+        return (Post.custom_manager
+                .posts_published()
+                .posts_annotate())
 
 
 class PostDeleteView(AuthorMixin, PostMixin, DeleteView):
@@ -112,35 +105,28 @@ def post_detail(request, post_id):
         'comments': post.comments.all()
     }
 
-    if request.user.username == post.author.username:
+    if (request.user == post.author
+        or (post.is_published and category.is_published
+            and post.pub_date <= timezone.now())):
         return render(request, template_path, context)
 
-    if not (post.is_published
-            and category.is_published
-            and post.pub_date <= timezone.now()):
-        raise Http404
-
-    return render(request, template_path, context)
+    raise Http404
 
 
 class CommentCreateView(LoginRequiredMixin, CreateView):
-    post_obj = None
     model = Comment
     form_class = CommentForm
 
-    def dispatch(self, request, *args, **kwargs):
-        self.post_obj = get_object_or_404(Post, pk=kwargs['post_id'])
-        return super().dispatch(request, *args, **kwargs)
-
     def form_valid(self, form):
         form.instance.author = self.request.user
-        form.instance.post_id = self.post_obj.id
+        form.instance.post_id = (get_object_or_404(
+            Post, pk=self.kwargs['post_id']).id)
         return super().form_valid(form)
 
     def get_success_url(self):
         return reverse(
             'blog:post_detail', kwargs={
-                'post_id': self.post_obj.id})
+                'post_id': self.kwargs['post_id']})
 
 
 class CommentUpdateView(AuthorMixin, CommentMixin, UpdateView):
@@ -158,7 +144,10 @@ def category_posts(request, category_slug):
         is_published=True
     )
     posts_list = (
-        Post.with_comment_count_all().filter(category=category)
+        Post.custom_manager
+        .posts_published()
+        .posts_annotate()
+        .filter(category=category)
     )
     paginator = Paginator(posts_list, AMOUNT_POSTS)
     page_number = request.GET.get('page')

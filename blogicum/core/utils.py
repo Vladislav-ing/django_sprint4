@@ -1,21 +1,16 @@
-from django.db.models import Manager
-
+from django.db import models
 from django.utils.timezone import now
 
 
-class PostsActiveManager(Manager):
-    def get_queryset(self):
-        return (super().get_queryset().filter(
+class PostsQuerySet(models.QuerySet):
+
+    def posts_published(self):
+        return (self.filter(
             pub_date__lte=now(), is_published=True,
             category__is_published=True)
-            .select_related('category', 'author', 'location')
-            .order_by('-pub_date')
         )
 
-
-class PostTotalManager(Manager):
-    def get_queryset(self):
-        return (super().get_queryset()
+    def posts_annotate(self):
+        return (self.annotate(comment_count=models.Count('comments'))
                 .select_related('category', 'author', 'location')
-                .order_by('-pub_date')
-                )
+                .order_by('-pub_date'))

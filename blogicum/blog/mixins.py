@@ -1,22 +1,19 @@
 from django.contrib.auth.mixins import UserPassesTestMixin
-
-from .models import Post, Comment
-
+from django.shortcuts import redirect
 from django.urls import reverse
 
-from django.http import HttpResponseRedirect
+from .models import Comment, Post
 
 
 # Authorization
 class AuthorMixin(UserPassesTestMixin):
 
     def test_func(self):
-        object = self.get_object()
-        return object.author == self.request.user
+        return self.get_object().author == self.request.user
 
     def handle_no_permission(self):
         object = self.get_object()
-        return HttpResponseRedirect(
+        return redirect(
             reverse(
                 'blog:post_detail',
                 kwargs={
