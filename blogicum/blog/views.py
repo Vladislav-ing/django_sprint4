@@ -26,14 +26,15 @@ class ProfileDetailView(ListView):
     def get_queryset(self):
         self.profile = get_object_or_404(
             User, username=self.kwargs['username'])
+
         if self.request.user == self.profile:
-            return (Post.custom_manager.posts_annotate()
+            return (Post.objects.posts_annotate()
                     .filter(author=self.profile))
-        else:
-            return (Post.custom_manager
-                    .posts_published()
-                    .posts_annotate()
-                    .filter(author=self.profile))
+
+        return (Post.objects
+                .posts_published()
+                .posts_annotate()
+                .filter(author=self.profile))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -79,7 +80,7 @@ class IndexPostListView(ListView):
     paginate_by = AMOUNT_POSTS
 
     def get_queryset(self):
-        return (Post.custom_manager
+        return (Post.objects
                 .posts_published()
                 .posts_annotate())
 
@@ -144,7 +145,7 @@ def category_posts(request, category_slug):
         is_published=True
     )
     posts_list = (
-        Post.custom_manager
+        Post.objects
         .posts_published()
         .posts_annotate()
         .filter(category=category)

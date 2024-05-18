@@ -4,7 +4,6 @@ from django.urls import reverse
 
 from core.models import TotalPublishCreate
 from core.utils import PostsQuerySet
-
 from . import constants
 
 UserModel = get_user_model()
@@ -32,10 +31,10 @@ class Category(TotalPublishCreate):
     """Модель для определения категории поста."""
 
     title = models.CharField(
-        max_length=constants.TITLE_FIELD_LENGTH, blank=True,
+        max_length=constants.TITLE_FIELD_LENGTH,
         verbose_name='Заголовок'
     )
-    description = models.TextField(blank=True, verbose_name='Описание')
+    description = models.TextField(verbose_name='Описание')
     slug = models.SlugField(
         unique=True, verbose_name='Идентификатор',
         help_text=('Идентификатор страницы для URL; '
@@ -86,9 +85,7 @@ class Post(TotalPublishCreate):
         'Изображение', blank='True',
         upload_to='post_imagine')
 
-    objects = models.Manager()
-
-    custom_manager = PostsQuerySet.as_manager()
+    objects = PostsQuerySet.as_manager()
 
     class Meta:
         verbose_name = 'публикация'
